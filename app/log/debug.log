@@ -1,0 +1,75 @@
+2025-11-25 09:58:58,258 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:14,126 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:17,754 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:45,944 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:45,962 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2025-11-25 09:59:46,109 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:46,125 [INFO] Identifiants Tableau sauvegardés pour server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2025-11-25 09:59:46,176 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2025-11-25 09:59:46,182 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:46,792 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2025-11-25 09:59:46,893 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2025-11-25 09:59:50,900 [INFO] Application Streamlit démarrée
+2025-11-25 09:59:50,920 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2025-11-25 09:59:51,049 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2025-11-25 09:59:57,752 [INFO] Application Streamlit démarrée
+2025-11-25 10:00:00,784 [INFO] Application Streamlit démarrée
+2025-11-25 10:00:10,854 [INFO] Application Streamlit démarrée
+2025-11-25 10:00:25,183 [INFO] Application Streamlit démarrée
+2025-11-25 10:00:25,227 [INFO] Début génération PPT : wb=Master Tableau GCP_FR - Light Template Quarterly, view=QUATERLY REPORTING BIS, template=Quaterly_review_template_FR.pptx (templates\Quaterly_review_template_FR.pptx)
+2025-11-25 10:00:25,228 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2025-11-25 10:00:25,333 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2025-11-25 10:01:30,642 [INFO] Export PPT workbook Tableau OK (id=75ff6d27-33d6-4705-9913-e44ad7ebd3ff)
+2025-11-25 10:01:33,051 [INFO] PDF Looker récupéré via Gmail : TEST_Automatisation .pdf
+2025-11-25 10:01:33,051 [INFO] PDF Looker récupéré via Gmail : TEST_Automatisation .pdf
+2025-11-25 10:01:39,303 [INFO] PPT final généré avec succès : MasterTableauGCP_FR-LightTemplateQuarterlysheetsQUATERLYREPORTINGBIS
+2025-11-25 10:01:43,062 [INFO] Application Streamlit démarrée
+2026-02-20 12:59:19,659 [INFO] Application Streamlit démarrée
+2026-02-20 13:05:52,954 [INFO] Application Streamlit démarrée
+2026-02-20 13:05:53,412 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=Auto-dash
+2026-02-20 13:05:54,364 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:05:54,365 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:08:20,493 [INFO] Application Streamlit démarrée
+2026-02-20 13:08:20,940 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:08:21,722 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:08:21,723 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:12:56,622 [INFO] Application Streamlit démarrée
+2026-02-20 13:12:56,691 [INFO] Application Streamlit démarrée
+2026-02-20 13:12:56,887 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:12:57,213 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:12:57,214 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:12:57,455 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:12:57,573 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:12:57,574 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:19:21,145 [INFO] Application Streamlit démarrée
+2026-02-20 13:19:22,091 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:19:22,685 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:19:22,685 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:27:29,416 [INFO] Application Streamlit démarrée
+2026-02-20 13:27:30,029 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:27:30,561 [ERROR] Authentification Tableau refusée (status=401)
+2026-02-20 13:27:30,562 [ERROR] Erreur récupération workbooks Tableau : Authentification refusée (401/403).
+2026-02-20 13:28:30,702 [INFO] Application Streamlit démarrée
+2026-02-20 13:28:30,721 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:28:31,409 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2026-02-20 13:28:33,825 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:28:34,589 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2026-02-20 13:28:46,431 [INFO] Application Streamlit démarrée
+2026-02-20 13:28:46,456 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:28:46,834 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2026-02-20 13:28:53,441 [INFO] Application Streamlit démarrée
+2026-02-20 13:28:57,849 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:08,138 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:10,734 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:10,835 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:20,894 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:21,042 [INFO] Application Streamlit démarrée
+2026-02-20 13:29:21,113 [INFO] Début génération PPT : wb=Master Tableau GCP_AS_DE - Light Template Quarterly, view=QUATERLY REPORTING, template=Quaterly_review_template_FR.pptx (templates\Quaterly_review_template_FR.pptx)
+2026-02-20 13:29:21,113 [INFO] Tentative de connexion Tableau : server=https://eu-west-1a.online.tableau.com, site=autobiz, pat_name=export_PPT
+2026-02-20 13:29:22,003 [INFO] Connexion Tableau OK : site_id=fdb53e55-95db-4af3-be9e-9387d2d15f27, user_id=8b26b161-420a-4cba-9de5-23803413afa9
+2026-02-20 13:29:43,980 [INFO] Export PPT workbook Tableau OK (id=8fbff966-3c3c-4bb0-bb4b-09bb081d33da)
+2026-02-20 13:29:47,434 [INFO] PDF Looker récupéré via Gmail : France_Leads_Report_-_Quarter.pdf
+2026-02-20 13:29:47,434 [INFO] PDF Looker récupéré via Gmail : France_Leads_Report_-_Quarter.pdf
+2026-02-20 13:29:49,447 [WARNING] Aucun PDF Gmail trouvé pour la requête : has:attachment filename:pdf newer_than:60d (from:looker-studio-noreply@google.com) (subject:"quaterly")
+2026-02-20 13:29:51,813 [INFO] PPT final généré avec succès : MasterTableauGCP_AS_DE-LightTemplateQuarterlysheetsQUATERLYREPORTING
+2026-02-20 13:30:19,331 [INFO] Application Streamlit démarrée
