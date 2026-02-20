@@ -1,0 +1,9 @@
+streamlit
+requests
+python-pptx
+Pillow
+pypdfium2
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
