@@ -37,10 +37,6 @@ def _clean(v: Any, default: str = "") -> str:
 
 
 def _get_secret_flat(name: str, default: str = "") -> str:
-    """
-    Essaie d'abord os.getenv(name), sinon st.secrets[name] si présent, sinon renvoie default.
-    Toujours une string (strip).
-    """
     try:
         v = os.getenv(name)
         if v:
@@ -55,58 +51,6 @@ def _get_secret_flat(name: str, default: str = "") -> str:
 
 
 def _get_secret(section: str, key: str, env_name: Optional[str] = None, default: str = "") -> str:
-    """
-    Lit un secret en priorité dans st.secrets[section][key] (compatible :
-    - Streamlit Cloud via Settings → Secrets
-    - Local via .streamlit/secrets.toml),
-    puis fallback éventuel sur une variable d'environnement (env_name), sinon default.
-    Renvoie toujours une string (strip).
-    """
-    # 1) Streamlit secrets (TOML structuré)
-    try:
-        if hasattr(st, "secrets") and section in st.secrets and key in st.secrets[section]:
-            return _clean(st.secrets[section][key], default)
-    except Exception:
-        pass
-
-    # 2) Fallback ENV (optionnel)
-    if env_name:
-        v = os.getenv(env_name)
-        if v:
-            return _clean(v, default)
-
-    return default
-
-
-def _normalize_tableau_server(server: str) -> str:
-    """
-    Accepte un 'server' donné comme :
-      - base: https://xx.online.tableau.com
-      - ou une URL de vue/story: https://xx.online.tableau.com/#/site/xxx/views/...
-      - ou https://xx.online.tableau.com/t/xxx/views/...
-    et renvoie la base 'scheme://netloc' attendue par l'API REST.
-    """
-    s = (server or "").strip()
-    if not s:
-        return s
-    try:
-        p = urlparse(s)
-        if p.scheme and p.netloc:
-            return f"{p.scheme}://{p.netloc}"
-    except Exception:
-        pass
-    # fallback : enlever un éventuel '/#...' si l'utilisateur a collé une URL complète
-    if "/#" in s:
-        s = s.split("/#", 1)[0]
-    # enlever les chemins courants /t/... etc.
-    return s.rstrip("/")
-def _get_secret(section: str, key: str, env_name: Optional[str] = None, default: str = "") -> str:
-    """
-    Lit un secret en priorité dans st.secrets[section][key] (compatible :
-    - Streamlit Cloud via Settings → Secrets
-    - Local via .streamlit/secrets.toml),
-    puis fallback éventuel sur une variable d'environnement (env_name), sinon default.
-    """
     # 1) Streamlit secrets (TOML structuré)
     try:
         if hasattr(st, "secrets") and section in st.secrets and key in st.secrets[section]:
@@ -124,6 +68,22 @@ def _get_secret(section: str, key: str, env_name: Optional[str] = None, default:
             return str(v)
 
     return default
+
+
+def _normalize_tableau_server(server: str) -> str:
+    s = (server or "").strip()
+    if not s:
+        return s
+    try:
+        p = urlparse(s)
+        if p.scheme and p.netloc:
+            return f"{p.scheme}://{p.netloc}"
+    except Exception:
+        pass
+    if "/#" in s:
+        s = s.split("/#", 1)[0]
+    return s.rstrip("/")
+
 
 # =====================================
 # Page config
@@ -147,10 +107,8 @@ LOG_DIR = APP_DIR / "log"
 for d in (CAPTURES_DIR, CONFIG_DIR, LOG_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
-# Cache local (sur cet appareil) – on le met dans config/
 LOCAL_CREDS_PATH = CONFIG_DIR / "local_device_creds.json"
 
-# Fichier de log debug
 DEBUG_LOG_PATH = LOG_DIR / "debug.log"
 logging.basicConfig(
     filename=str(DEBUG_LOG_PATH),
@@ -160,19 +118,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("Application Streamlit démarrée")
 
-# PIN (optionnel)
 APP_PIN = (os.getenv("APP_PIN") or "").strip()
-
-# Version API Tableau
 TABLEAU_API_VERSION = os.getenv("TABLEAU_API_VERSION", "3.22")
 
 # ====== Tableau (Streamlit Secrets) ======
-# Attendu dans Secrets (TOML):
-# [tableau]
-# server = "https://..."
-# site = "..."            # contentUrl, vide = Default
-# pat_name = "..."
-# pat_secret = "..."
 TBL_SECRET_SERVER = _normalize_tableau_server(_get_secret("tableau", "server", env_name="TABLEAU_SERVER"))
 TBL_SECRET_SITE = _get_secret("tableau", "site", env_name="TABLEAU_SITE")
 if TBL_SECRET_SITE.lower() == "default":
@@ -182,15 +131,30 @@ TBL_SECRET_PAT_SECRET = _get_secret("tableau", "pat_secret", env_name="TABLEAU_P
 
 HAS_TABLEAU_SECRETS = bool(TBL_SECRET_SERVER and TBL_SECRET_PAT_NAME and TBL_SECRET_PAT_SECRET)
 
-# ===== Placeholders (mêmes noms que ton script validé) =====
+# ===== Placeholders =====
 PH_TBL, PH_TBL_TITLE = "PH_TBL", "PH_TBL_TITLE"
 PH_LKR_BASE, PH_LKR_TITLE_BASE = "PH_LKR", "PH_LKR_TITLE"
 PH_IMAGE_MAIN, PH_TITLE_MAIN = "PH_IMAGE_MAIN", "PH_TITLE"
 
-# Rognage top : pas de slider, contrôlable par variable d'env
-TOPBAR_CROP_PCT = float(os.getenv("TOPBAR_CROP_PCT", "0.10"))  # 12% par défaut
+TOPBAR_CROP_PCT = float(os.getenv("TOPBAR_CROP_PCT", "0.10"))
 
+FIT_MODE = (os.getenv("IMAGE_FIT_MODE", "contain") or "contain").lower()
 
+LKR_FIT_MODE = (os.getenv("LKR_FIT_MODE", "contain") or "contain").lower()
+LKR_TRIM = (os.getenv("LKR_TRIM", "false").lower() == "true")
+LKR_CROP_TOP = float(os.getenv("LKR_CROP_TOP", "0"))
+LKR_CROP_BOTTOM = float(os.getenv("LKR_CROP_BOTTOM", "0"))
+LKR_CROP_LEFT = float(os.getenv("LKR_CROP_LEFT", "0.08"))
+LKR_CROP_RIGHT = float(os.getenv("LKR_CROP_RIGHT", "0.08"))
+
+# ====== Gmail (Streamlit Secrets) ======
+GMAIL_CLIENT_ID = _get_secret("gmail", "client_id", env_name="GMAIL_CLIENT_ID")
+GMAIL_CLIENT_SECRET = _get_secret("gmail", "client_secret", env_name="GMAIL_CLIENT_SECRET")
+GMAIL_REFRESH_TOKEN = _get_secret("gmail", "refresh_token", env_name="GMAIL_REFRESH_TOKEN")
+GMAIL_USER = (_get_secret("gmail", "user", env_name="GMAIL_USER", default="me") or "me")
+DEFAULT_SENDER = "looker-studio-noreply@google.com"
+
+HAS_GMAIL_SECRETS = bool(GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN)
 
 
 def _has_secret(section: str, key: str) -> bool:
@@ -206,39 +170,6 @@ def _mask(s: str, keep_last: int = 4) -> str:
     if len(s) <= keep_last:
         return "•" * len(s)
     return ("•" * (len(s) - keep_last)) + s[-keep_last:]
-
-
-
-# Ajustement d'image dans le placeholder :
-# - "contain" : pas de crop (centré avec éventuelles marges)
-# - "cover" : recouvre la zone (peut rogner)
-FIT_MODE = (os.getenv("IMAGE_FIT_MODE", "contain") or "contain").lower()
-
-# --- Looker: ajustements spécifiques ---
-# Pas de crop latéral, pas de trim par défaut: on travaille en 'contain'
-LKR_FIT_MODE = (os.getenv("LKR_FIT_MODE", "contain") or "contain").lower()
-LKR_TRIM = (os.getenv("LKR_TRIM", "false").lower() == "true")  # false par défaut
-
-# Rognage par pourcentage du PDF Looker (utile pour couper une ligne d'entête/pied)
-LKR_CROP_TOP = float(os.getenv("LKR_CROP_TOP", "0"))   # ex: 0.08 (= 8 %)
-LKR_CROP_BOTTOM = float(os.getenv("LKR_CROP_BOTTOM", "0"))
-LKR_CROP_LEFT = float(os.getenv("LKR_CROP_LEFT", "0.08"))
-LKR_CROP_RIGHT = float(os.getenv("LKR_CROP_RIGHT", "0.08"))
-
-# ====== Gmail (Streamlit Secrets) ======
-# Attendu dans Secrets (TOML):
-# [gmail]
-# client_id = "..."
-# client_secret = "..."
-# refresh_token = "..."
-# user = "me"   # ou une adresse Gmail
-GMAIL_CLIENT_ID = _get_secret("gmail", "client_id", env_name="GMAIL_CLIENT_ID")
-GMAIL_CLIENT_SECRET = _get_secret("gmail", "client_secret", env_name="GMAIL_CLIENT_SECRET")
-GMAIL_REFRESH_TOKEN = _get_secret("gmail", "refresh_token", env_name="GMAIL_REFRESH_TOKEN")
-GMAIL_USER = (_get_secret("gmail", "user", env_name="GMAIL_USER", default="me") or "me")
-DEFAULT_SENDER = "looker-studio-noreply@google.com"
-
-HAS_GMAIL_SECRETS = bool(GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN)
 
 
 # =====================================
@@ -263,7 +194,6 @@ def _write_local_device_cache(d: dict) -> None:
         logger.error("Erreur écriture cache local_device_creds.json : %s", e)
 
 
-# ---- Tableau creds ----
 def load_local_device_creds() -> Optional[dict]:
     cache = _read_local_device_cache()
     return cache.get("tableau")
@@ -282,7 +212,6 @@ def clear_local_device_creds():
     _write_local_device_cache(cache)
 
 
-# ---- Looker sources (multi-sources Gmail/URL) ----
 def load_looker_sources() -> List[dict]:
     cache = _read_local_device_cache()
     return cache.get("looker_sources", [])
@@ -315,9 +244,6 @@ def _normalize_server(url: str) -> str:
 
 
 def _autocorrect_tableau_pod_hostname(server_url: str) -> Tuple[str, Optional[str]]:
-    """
-    Corrige 'eu-west-la' -> 'eu-west-1a' si besoin.
-    """
     try:
         parsed = urlparse(server_url)
         host = (parsed.hostname or "").lower()
@@ -348,14 +274,8 @@ def _check_dns(host: str) -> Tuple[bool, Optional[str]]:
 def tableau_credentials_ui(
     saved: dict | None = None, key_prefix: str = "tbl_main"
 ) -> Tuple[str, str, str, str]:
-    """
-    - En prod / local (avec .streamlit/secrets.toml ou Streamlit Cloud Secrets):
-      si les secrets Tableau sont présents, on les utilise et on n'affiche pas les champs de saisie.
-    - Sinon, on retombe sur le mode historique (saisie UI + cache local).
-    """
     saved = saved or {}
 
-    # 1) Secrets (recommandé)
     if HAS_TABLEAU_SECRETS:
         server_in = TBL_SECRET_SERVER
         site = TBL_SECRET_SITE
@@ -375,7 +295,6 @@ def tableau_credentials_ui(
 
         return server.strip(), (site or "").strip(), pat_name.strip(), pat_secret.strip()
 
-    # 2) Fallback UI (local sans secrets)
     def k(name: str) -> str:
         return f"cred_{key_prefix}_{name}"
 
@@ -490,9 +409,7 @@ class TableauSession:
             timeout=30,
         )
         if r.status_code in (401, 403):
-            logger.error(
-                "Authentification Tableau refusée (status=%s)", r.status_code
-            )
+            logger.error("Authentification Tableau refusée (status=%s)", r.status_code)
             raise RuntimeError("Authentification refusée (401/403).")
         c = _json_or_raise(r).get("credentials", {})
         self.token = c.get("token")
@@ -501,11 +418,7 @@ class TableauSession:
         if not (self.token and self.site_id and self.user_id):
             logger.error("Connexion Tableau incomplète : token/site_id/user_id manquants")
             raise RuntimeError("Connexion Tableau incomplète.")
-        logger.info(
-            "Connexion Tableau OK : site_id=%s, user_id=%s",
-            self.site_id,
-            self.user_id,
-        )
+        logger.info("Connexion Tableau OK : site_id=%s, user_id=%s", self.site_id, self.user_id)
 
     def signout(self):
         if not self.token:
@@ -546,9 +459,7 @@ class TableauSession:
         out.sort(key=lambda x: (x.get("name") or "").lower())
         return out
 
-    def list_views_for_workbook(
-        self, workbook_id: str, page_size=1000
-    ) -> List[Dict[str, Any]]:
+    def list_views_for_workbook(self, workbook_id: str, page_size=1000) -> List[Dict[str, Any]]:
         r = requests.get(
             f"{self.base}/sites/{self.site_id}/workbooks/{workbook_id}/views",
             headers=self._headers(),
@@ -565,7 +476,6 @@ class TableauSession:
         out.sort(key=lambda x: (x.get("name") or "").lower())
         return out
 
-    # --- Exports PPT ---
     def export_view_ppt(self, view_id: str) -> Optional[bytes]:
         return self._download_binary(
             f"{self.base}/sites/{self.site_id}/views/{view_id}/powerpoint"
@@ -600,14 +510,9 @@ class TableauSession:
                     continue
                 r.raise_for_status()
             except Exception as e:
-                logger.warning(
-                    "Erreur download_binary (Accept=%s) : %s",
-                    a,
-                    e,
-                )
+                logger.warning("Erreur download_binary (Accept=%s) : %s", a, e)
                 continue
 
-        # tentative sans header Accept
         try:
             r = requests.get(
                 url,
@@ -626,7 +531,6 @@ class TableauSession:
         return None
 
 
-# --- Cache Streamlit (catalogue) ---
 @st.cache_data(show_spinner=False, ttl=600)
 def cached_fetch_workbooks(
     server: str, site: str, pat_name: str, pat_secret: str, api_version: str
@@ -657,7 +561,7 @@ def cached_fetch_views(
 
 
 # =====================================
-# Looker — UI multi-sources (Gmail / URL) + filtres
+# Looker — UI multi-sources (Gmail / URL / Upload)
 # =====================================
 def build_gmail_query(
     senders_csv: str | None, subjects_csv: str | None, label: str | None, days: int
@@ -691,8 +595,12 @@ def looker_sources_ui():
 
         mode = cols[0].selectbox(
             "Mode",
-            ["gmail", "url"],
-            index=(0 if src.get("mode", "gmail") == "gmail" else 1),
+            ["gmail", "url", "upload"],
+            index=(
+                0 if src.get("mode", "gmail") == "gmail"
+                else 1 if src.get("mode") == "url"
+                else 2
+            ),
             key=f"lkr_mode_{idx}",
         )
         src["mode"] = mode
@@ -736,6 +644,24 @@ def looker_sources_ui():
                 placeholder="https://…/export.pdf",
             )
 
+        elif mode == "upload":
+            # -------------------------------------------------------
+            # NOUVEAU : upload direct d'un fichier PDF pour ce rapport
+            # -------------------------------------------------------
+            uploaded = st.file_uploader(
+                f"📎 Uploader le PDF du rapport {idx+1}",
+                type=["pdf"],
+                key=f"lkr_upload_{idx}",
+                help="Glisse-dépose ou clique pour sélectionner un fichier PDF.",
+            )
+            if uploaded is not None:
+                # On stocke les bytes dans le session_state (pas sérialisable en JSON, OK)
+                src["uploaded_bytes"] = uploaded.read()
+                src["uploaded_name"] = uploaded.name
+                st.caption(f"✅ Fichier chargé : **{uploaded.name}** ({len(src['uploaded_bytes']) // 1024} Ko)")
+            elif src.get("uploaded_name"):
+                st.caption(f"ℹ️ Dernier fichier chargé : **{src['uploaded_name']}** (toujours en mémoire pour cette session)")
+
         col_del = st.columns([1, 5, 1])
         if col_del[2].button("🗑️ Supprimer", key=f"del_src_{idx}"):
             st.session_state["lkr_sources"].pop(idx)
@@ -750,7 +676,12 @@ def looker_sources_ui():
         st.session_state["lkr_sources"].append({"mode": "gmail"})
         st.rerun()
     if col_actions[1].button("💾 Enregistrer les sources"):
-        save_looker_sources(st.session_state["lkr_sources"])
+        # On ne persiste que les sources sans bytes (non-sérialisable)
+        sources_to_save = [
+            {k: v for k, v in src.items() if k not in ("uploaded_bytes",)}
+            for src in st.session_state["lkr_sources"]
+        ]
+        save_looker_sources(sources_to_save)
         st.success("Sources Looker enregistrées localement.")
     if col_actions[2].button("🗑️ Réinitialiser les sources"):
         clear_looker_sources()
@@ -855,7 +786,6 @@ def add_picture_fit(
 ):
     pil = _bytes_to_pil(img_bytes)
 
-    # Recadrage doux par pourcentage AVANT tout (utile pour Looker)
     if pre_crop_pct:
         top_pct = max(0.0, min(0.49, float(pre_crop_pct.get("top", 0.0))))
         bottom_pct = max(0.0, min(0.49, float(pre_crop_pct.get("bottom", 0.0))))
@@ -869,7 +799,6 @@ def add_picture_fit(
         if x2 > x1 and y2 > y1:
             pil = pil.crop((x1, y1, x2, y2))
 
-    # Trim + rognage haut (réservés à Tableau ; pour Looker on les désactive via paramètres)
     if trim:
         pil = trim_whitespace(pil)
     if topbar_crop_pct and topbar_crop_pct > 0:
@@ -884,7 +813,6 @@ def add_picture_fit(
     ar_box = W / H
 
     if fit == "contain":
-        # Aucun crop: on rentre l'image dans la boîte, centrée
         if ar_img >= ar_box:
             tgt_w = W
             tgt_h = int(W / ar_img)
@@ -902,7 +830,6 @@ def add_picture_fit(
         )
         return pic
 
-    # "cover": recouvre la boîte (possibles coupes légères)
     crop_left = crop_right = crop_top = crop_bottom = 0.0
     if ar_img > ar_box:
         new_w = H * ar_box
@@ -997,13 +924,8 @@ def fill_template_by_streams_cover(
     trim=True,
     topbar_crop_pct=0.0,
 ) -> bytes:
-    """
-    Remplit le template par tokens (PH_TBL / PH_LKR_x ...), en utilisant
-    pour chaque 'stream' ses propres options (trim/topbar/fit/pre_crop_pct).
-    """
     prs = Presentation(io.BytesIO(template_bytes))
 
-    # On détecte toutes les positions de tokens une seule fois
     tokens: List[str] = []
     for s in streams.values():
         tokens.append(s["token_image"])
@@ -1020,18 +942,16 @@ def fill_template_by_streams_cover(
         images = s.get("images") or []
         titles = s.get("titles") or []
 
-        # options spécifiques par stream (avec valeurs par défaut globales)
         cfg_trim = bool(s.get("trim", trim))
         cfg_topbar = float(s.get("topbar_crop_pct", topbar_crop_pct))
         cfg_fit = (s.get("fit", "contain") or "contain").lower()
-        cfg_prec = s.get("pre_crop_pct", None)  # dict ou None
+        cfg_prec = s.get("pre_crop_pct", None)
 
         n = min(len(images), len(slots))
         for i in range(n):
             si, left, top, width, height = slots[i]
             slide = prs.slides[si]
 
-            # on retire le placeholder si présent
             kill = None
             for cand in _iter_shapes(slide):
                 if _is_match_strict(cand, t_img):
@@ -1043,7 +963,6 @@ def fill_template_by_streams_cover(
                 except Exception:
                     pass
 
-            # On utilise add_picture_fit avec les options par stream
             add_picture_fit(
                 slide,
                 images[i],
@@ -1057,7 +976,6 @@ def fill_template_by_streams_cover(
                 pre_crop_pct=cfg_prec,
             )
 
-            # Remplissage du titre si demandé
             if t_tit and i < len(titles) and titles[i]:
                 for cand in _iter_shapes(slide):
                     if _is_match_strict(cand, t_tit) and hasattr(cand, "text_frame"):
@@ -1128,7 +1046,7 @@ def fill_template_sequential_cover(
             w,
             h,
             trim=trim,
-            topbar_crop_pct=topbar_pct,
+            topbar_crop_pct=topbar_crop_pct,
             fit=FIT_MODE,
         )
 
@@ -1364,142 +1282,173 @@ def app_main():
             "(config/local_device_creds.json)."
         )
 
-    # ---------- 1) Identifiants Tableau ----------
-    saved = (load_local_device_creds() or {}) if not HAS_TABLEAU_SECRETS else {}
-    st.subheader("🔑 Identifiants Tableau")
-    server, site, pat_name, pat_secret = tableau_credentials_ui(
-        saved, key_prefix="tbl_main"
+    # =====================================
+    # SECTION TABLEAU : choix du mode source
+    # =====================================
+    st.subheader("📊 Source Tableau")
+
+    tbl_source_mode = st.radio(
+        "Mode de récupération des slides Tableau",
+        options=["online", "upload"],
+        format_func=lambda x: "🌐 Tableau Online (API)" if x == "online" else "📎 Upload PDF local",
+        horizontal=True,
+        key="tbl_source_mode",
     )
 
-    colA, colB, colC, colD, colE = st.columns([1, 1, 1, 1, 1])
-    if not HAS_TABLEAU_SECRETS:
-        if colA.button("💾 Enregistrer / Mettre à jour"):
-            payload = {
-                "server": server,
-                "site": site,
-                "pat_name": pat_name,
-                "pat_secret": pat_secret,
-            }
-            if not (server and pat_name and pat_secret):
-                st.error(
-                    "Renseigne **server, PAT name et PAT secret** "
-                    "(site peut être vide si 'Default')."
-                )
-            else:
-                save_local_device_creds(payload)
-                logger.info(
-                    "Identifiants Tableau sauvegardés pour server=%s, site=%s, pat_name=%s",
-                    server,
-                    site,
-                    pat_name,
-                )
-                st.success("Identifiants enregistrés localement.")
+    # ---- Mode Upload PDF Tableau ----
+    tbl_uploaded_pdf_bytes: Optional[bytes] = None
+    tbl_uploaded_pdf_name: Optional[str] = None
+
+    if tbl_source_mode == "upload":
+        st.info(
+            "Uploade un fichier PDF exporté depuis Tableau (ou tout autre outil). "
+            "Chaque page du PDF deviendra une slide dans la présentation finale."
+        )
+        tbl_pdf_file = st.file_uploader(
+            "📎 Fichier PDF Tableau",
+            type=["pdf"],
+            key="tbl_pdf_uploader",
+            help="Exporte ton rapport Tableau en PDF, puis glisse-le ici.",
+        )
+        if tbl_pdf_file is not None:
+            tbl_uploaded_pdf_bytes = tbl_pdf_file.read()
+            tbl_uploaded_pdf_name = tbl_pdf_file.name
+            st.success(f"✅ PDF chargé : **{tbl_uploaded_pdf_name}** ({len(tbl_uploaded_pdf_bytes) // 1024} Ko)")
+        else:
+            st.warning("Aucun fichier PDF uploadé pour Tableau.")
+
+    # ---- Mode Online Tableau (identique à avant) ----
+    server = site = pat_name = pat_secret = ""
+    selected_wb = selected_view = None
+
+    if tbl_source_mode == "online":
+        saved = (load_local_device_creds() or {}) if not HAS_TABLEAU_SECRETS else {}
+        st.subheader("🔑 Identifiants Tableau")
+        server, site, pat_name, pat_secret = tableau_credentials_ui(
+            saved, key_prefix="tbl_main"
+        )
+
+        colA, colB, colC, colD, colE = st.columns([1, 1, 1, 1, 1])
+        if not HAS_TABLEAU_SECRETS:
+            if colA.button("💾 Enregistrer / Mettre à jour"):
+                payload = {
+                    "server": server,
+                    "site": site,
+                    "pat_name": pat_name,
+                    "pat_secret": pat_secret,
+                }
+                if not (server and pat_name and pat_secret):
+                    st.error(
+                        "Renseigne **server, PAT name et PAT secret** "
+                        "(site peut être vide si 'Default')."
+                    )
+                else:
+                    save_local_device_creds(payload)
+                    logger.info(
+                        "Identifiants Tableau sauvegardés pour server=%s, site=%s, pat_name=%s",
+                        server, site, pat_name,
+                    )
+                    st.success("Identifiants enregistrés localement.")
+                    st.rerun()
+            if colB.button("↩️ Recharger depuis le cache local"):
+                st.experimental_set_query_params()
                 st.rerun()
-        if colB.button("↩️ Recharger depuis le cache local"):
+            if colC.button("🗑️ Supprimer du cache local"):
+                clear_local_device_creds()
+                logger.info("Identifiants Tableau supprimés du cache local")
+                st.success("Identifiants supprimés.")
+                st.rerun()
+        else:
+            colA.empty(); colB.empty(); colC.empty()
+            st.info("Identifiants Tableau fournis par Streamlit Secrets : aucune action de sauvegarde locale n'est nécessaire.")
+
+        if colD.button("🔄 Rafraîchir workbooks/vues"):
+            cached_fetch_workbooks.clear()
+            cached_fetch_views.clear()
+            logger.info("Cache workbooks/views vidé manuellement")
+            st.success("Cache des listes vidé.")
             st.experimental_set_query_params()
             st.rerun()
-        if colC.button("🗑️ Supprimer du cache local"):
-            clear_local_device_creds()
-            logger.info("Identifiants Tableau supprimés du cache local")
-            st.success("Identifiants supprimés.")
-            st.rerun()
-    else:
-        colA.empty(); colB.empty(); colC.empty()
-        st.info("Identifiants Tableau fournis par Streamlit Secrets : aucune action de sauvegarde locale n'est nécessaire.")
-    if colD.button("🔄 Rafraîchir workbooks/vues"):
 
-        cached_fetch_workbooks.clear()
-        cached_fetch_views.clear()
-        logger.info("Cache workbooks/views vidé manuellement")
-        st.success("Cache des listes vidé.")
-        st.experimental_set_query_params()
-        st.rerun()
-    # colE laissé libre pour futures options
+        st.markdown("---")
 
-    st.markdown("---")
-
-    # ---------- 2) Sélection Tableau ----------
-    creds_ready = all([server, pat_name, pat_secret])
-    if not creds_ready:
-        st.info(
-            "Renseigne/charge tes identifiants (server/PAT) pour afficher "
-            "la sélection des reportings."
-        )
-        return
-
-    st.subheader("📊 Sélection des reportings Tableau")
-    with st.expander("🔍 Choisir le reporting et la story", expanded=True):
-        try:
-            with st.spinner("Récupération des reportings…"):
-                workbooks = cached_fetch_workbooks(
-                    server, site, pat_name, pat_secret, TABLEAU_API_VERSION
-                )
-        except Exception as e:
-            logger.error("Erreur récupération workbooks Tableau : %s", e)
-            st.error(f"Impossible de récupérer les reportings : {e}")
-            workbooks = []
-
-        wb_names = [wb["name"] for wb in workbooks]
-        selected_wb_name = (
-            st.selectbox(
-                "Nom du reporting",
-                options=wb_names,
-                index=0 if wb_names else None,
+        creds_ready = all([server, pat_name, pat_secret])
+        if not creds_ready:
+            st.info(
+                "Renseigne/charge tes identifiants (server/PAT) pour afficher "
+                "la sélection des reportings."
             )
-            if wb_names
-            else None
-        )
-        selected_wb = (
-            next((wb for wb in workbooks if wb.get("name") == selected_wb_name), None)
-            if selected_wb_name
-            else None
-        )
-        selected_wb_id = selected_wb.get("id") if selected_wb else None
+            return
 
-        selected_view = None
-        if selected_wb_id:
+        st.subheader("📊 Sélection des reportings Tableau")
+        with st.expander("🔍 Choisir le reporting et la story", expanded=True):
             try:
-                with st.spinner("Récupération des stories du reporting…"):
-                    views = cached_fetch_views(
-                        server,
-                        site,
-                        pat_name,
-                        pat_secret,
-                        TABLEAU_API_VERSION,
-                        selected_wb_id,
+                with st.spinner("Récupération des reportings…"):
+                    workbooks = cached_fetch_workbooks(
+                        server, site, pat_name, pat_secret, TABLEAU_API_VERSION
                     )
             except Exception as e:
-                logger.error("Erreur récupération vues Tableau : %s", e)
-                st.error(f"Impossible de récupérer les stories du reporting : {e}")
-                views = []
+                logger.error("Erreur récupération workbooks Tableau : %s", e)
+                st.error(f"Impossible de récupérer les reportings : {e}")
+                workbooks = []
 
-            view_names = [v["name"] for v in views]
-            selected_view_name = (
+            wb_names = [wb["name"] for wb in workbooks]
+            selected_wb_name = (
                 st.selectbox(
-                    "Nom de la story",
-                    options=view_names,
-                    index=0 if view_names else None,
+                    "Nom du reporting",
+                    options=wb_names,
+                    index=0 if wb_names else None,
                 )
-                if view_names
+                if wb_names
                 else None
             )
-            selected_view = (
-                next((v for v in views if v.get("name") == selected_view_name), None)
-                if selected_view_name
+            selected_wb = (
+                next((wb for wb in workbooks if wb.get("name") == selected_wb_name), None)
+                if selected_wb_name
                 else None
             )
+            selected_wb_id = selected_wb.get("id") if selected_wb else None
 
-        if selected_wb and selected_view:
-            st.success(
-                f"🎯 Sélection : **{selected_wb['name']}** → **{selected_view['name']}**"
-            )
-            st.caption(
-                f"IDs: workbook={selected_wb['id']} | view={selected_view['id']}"
-            )
+            selected_view = None
+            if selected_wb_id:
+                try:
+                    with st.spinner("Récupération des stories du reporting…"):
+                        views = cached_fetch_views(
+                            server, site, pat_name, pat_secret,
+                            TABLEAU_API_VERSION, selected_wb_id,
+                        )
+                except Exception as e:
+                    logger.error("Erreur récupération vues Tableau : %s", e)
+                    st.error(f"Impossible de récupérer les stories du reporting : {e}")
+                    views = []
+
+                view_names = [v["name"] for v in views]
+                selected_view_name = (
+                    st.selectbox(
+                        "Nom de la story",
+                        options=view_names,
+                        index=0 if view_names else None,
+                    )
+                    if view_names
+                    else None
+                )
+                selected_view = (
+                    next((v for v in views if v.get("name") == selected_view_name), None)
+                    if selected_view_name
+                    else None
+                )
+
+            if selected_wb and selected_view:
+                st.success(
+                    f"🎯 Sélection : **{selected_wb['name']}** → **{selected_view['name']}**"
+                )
+                st.caption(
+                    f"IDs: workbook={selected_wb['id']} | view={selected_view['id']}"
+                )
 
     st.markdown("---")
 
-    # ---------- 3) Template PPT ----------
+    # ---------- Template PPT ----------
     st.subheader("📄 Template PowerPoint")
     discovered = discover_templates()
     options = ["(aucun)"] + list(discovered.keys())
@@ -1516,67 +1465,101 @@ def app_main():
     keep_tbl_titles = st.checkbox("Conserver les titres Tableau du template", value=True)
     keep_lkr_titles = st.checkbox("Conserver les titres Looker du template", value=True)
 
-    # Pas de slider : valeur déterminée par env TOPBAR_CROP_PCT
     topbar_pct = TOPBAR_CROP_PCT
 
     st.markdown("---")
 
-    # ---------- 4) Looker — multi-sources ----------
+    # ---------- Looker — multi-sources ----------
     with st.expander("📧 Configurer les sources Looker", expanded=True):
         looker_sources_ui()
 
-    # ---------- 5) Générer ----------
+    # ---------- Générer ----------
+    # Condition de déclenchement selon le mode Tableau choisi
+    if tbl_source_mode == "upload":
+        disabled = not (tbl_uploaded_pdf_bytes and tpl_bytes)
+    else:
+        disabled = not (selected_wb and selected_view and tpl_bytes)
+
     c1, _ = st.columns([1, 3])
-    disabled = not (selected_wb and selected_view and tpl_bytes)
 
     if c1.button("🚀 Générer la présentation", disabled=disabled):
         try:
             logger.info(
-                "Début génération PPT : wb=%s, view=%s, template=%s",
-                selected_wb["name"] if selected_wb else None,
-                selected_view["name"] if selected_view else None,
+                "Début génération PPT : mode=%s, template=%s",
+                tbl_source_mode,
                 tpl_name,
             )
 
-            # -- Connect Tableau pour export --
-            with st.spinner("Connexion Tableau + export…"):
-                sess = TableauSession(
-                    server, site, pat_name, pat_secret, TABLEAU_API_VERSION
-                )
-                sess.signin()
+            # =====================================================
+            # RÉCUPÉRATION DES IMAGES TABLEAU
+            # =====================================================
+            tbl_images: List[bytes] = []
+            tbl_titles_derived: List[str] = []
+            export_label = "upload"  # utilisé pour le nom du fichier de sortie
 
-                # On tente d'abord le workbook PPT, sinon la vue PPT
-                wb_ppt = sess.export_workbook_ppt(selected_wb["id"])
-                if wb_ppt:
+            if tbl_source_mode == "upload":
+                # ---- PDF uploadé → conversion en images PNG ----
+                with st.spinner("Conversion du PDF Tableau en images…"):
+                    if not tbl_uploaded_pdf_bytes.startswith(b"%PDF"):
+                        st.error("Le fichier uploadé ne semble pas être un PDF valide.")
+                        return
+                    tbl_images = pdf_to_png_bytes(tbl_uploaded_pdf_bytes, zoom=2.0)
+                    tbl_titles_derived = [f"Page {i+1}" for i in range(len(tbl_images))]
+                    export_label = (
+                        Path(tbl_uploaded_pdf_name).stem
+                        if tbl_uploaded_pdf_name
+                        else "upload"
+                    )
                     logger.info(
-                        "Export PPT workbook Tableau OK (id=%s)", selected_wb["id"]
+                        "PDF Tableau uploadé converti : %d pages (%s)",
+                        len(tbl_images),
+                        tbl_uploaded_pdf_name,
                     )
-                    all_imgs = extract_slide_pictures_from_ppt(wb_ppt)
-                    all_titles = extract_slide_titles_tableau_aware(
-                        wb_ppt, workbook_title_guess=selected_wb["name"]
+
+            else:
+                # ---- API Tableau Online (comportement identique à avant) ----
+                with st.spinner("Connexion Tableau + export…"):
+                    sess = TableauSession(
+                        server, site, pat_name, pat_secret, TABLEAU_API_VERSION
                     )
-                    tbl_images = all_imgs
-                    tbl_titles_derived = all_titles
-                else:
-                    logger.info(
-                        "Export PPT workbook impossible, tentative sur la vue (view_id=%s)",
-                        selected_view["id"],
-                    )
-                    view_ppt = sess.export_view_ppt(selected_view["id"])
-                    if not view_ppt:
-                        raise RuntimeError(
-                            "Impossible d'obtenir le PPT Tableau (exports désactivés ?)"
+                    sess.signin()
+
+                    wb_ppt = sess.export_workbook_ppt(selected_wb["id"])
+                    if wb_ppt:
+                        logger.info("Export PPT workbook Tableau OK (id=%s)", selected_wb["id"])
+                        all_imgs = extract_slide_pictures_from_ppt(wb_ppt)
+                        all_titles = extract_slide_titles_tableau_aware(
+                            wb_ppt, workbook_title_guess=selected_wb["name"]
                         )
-                    tbl_images = extract_slide_pictures_from_ppt(view_ppt)
-                    tbl_titles_derived = extract_slide_titles_tableau_aware(
-                        view_ppt, workbook_title_guess=selected_wb["name"]
-                    )
+                        tbl_images = all_imgs
+                        tbl_titles_derived = all_titles
+                    else:
+                        logger.info(
+                            "Export PPT workbook impossible, tentative sur la vue (view_id=%s)",
+                            selected_view["id"],
+                        )
+                        view_ppt = sess.export_view_ppt(selected_view["id"])
+                        if not view_ppt:
+                            raise RuntimeError(
+                                "Impossible d'obtenir le PPT Tableau (exports désactivés ?)"
+                            )
+                        tbl_images = extract_slide_pictures_from_ppt(view_ppt)
+                        tbl_titles_derived = extract_slide_titles_tableau_aware(
+                            view_ppt, workbook_title_guess=selected_wb["name"]
+                        )
 
-                sess.signout()
+                    sess.signout()
+                    export_label = "".join(
+                        c
+                        for c in (
+                            selected_view.get("contentUrl") or selected_view["name"]
+                        )
+                        if c.isalnum() or c in "_-"
+                    )
 
             if not tbl_images:
-                logger.warning("Aucune image extraite du PPT Tableau.")
-                st.error("Aucune image utilisable depuis le PPT Tableau.")
+                logger.warning("Aucune image extraite depuis la source Tableau.")
+                st.error("Aucune image utilisable depuis la source Tableau.")
                 return
 
             tbl_titles = (
@@ -1585,15 +1568,16 @@ def app_main():
                 else [
                     (
                         tbl_titles_derived[i]
-                        if i < len(tbl_titles_derived)
-                        and tbl_titles_derived[i]
+                        if i < len(tbl_titles_derived) and tbl_titles_derived[i]
                         else f"Slide {i+1}"
                     )
                     for i in range(len(tbl_images))
                 ]
             )
 
-            # -- Looker: récupérer chaque source (Gmail/URL) -> PDF -> images --
+            # =====================================================
+            # RÉCUPÉRATION DES IMAGES LOOKER
+            # =====================================================
             lkr_all_images: List[List[bytes]] = []
             lkr_all_titles: List[List[str]] = []
             gmail_ready = (
@@ -1626,9 +1610,7 @@ def app_main():
                         pdf_bytes, fname = fetch_latest_looker_pdf_bytes_gmail(q)
 
                         if pdf_bytes:
-                            logger.info(
-                                "PDF Looker récupéré via Gmail : %s", fname
-                            )
+                            logger.info("PDF Looker récupéré via Gmail : %s", fname)
                             imgs = pdf_to_png_bytes(pdf_bytes, zoom=2.0)
                             lkr_all_images.append(imgs)
                             lkr_all_titles.append(
@@ -1636,9 +1618,7 @@ def app_main():
                             )
                         else:
                             if not st.session_state.get("_gmail_warned"):
-                                st.warning(
-                                    f"Aucun PDF via Gmail pour la requête : {q}"
-                                )
+                                st.warning(f"Aucun PDF via Gmail pour la requête : {q}")
                                 st.session_state["_gmail_warned"] = True
 
                     elif mode == "url":
@@ -1649,9 +1629,7 @@ def app_main():
 
                         pdf_bytes, fname = fetch_looker_pdf_from_url(url_val)
                         if not pdf_bytes:
-                            st.warning(
-                                "Téléchargement Looker impossible depuis l'URL fournie."
-                            )
+                            st.warning("Téléchargement Looker impossible depuis l'URL fournie.")
                             continue
 
                         logger.info("PDF Looker récupéré via URL : %s", fname)
@@ -1661,7 +1639,36 @@ def app_main():
                             [f"Page {i+1}" for i in range(len(imgs))]
                         )
 
-            # -- Assemblage PPT : bascule placeholders si PH_TBL / PH_LKR_* existent --
+                    elif mode == "upload":
+                        # -----------------------------------------------
+                        # NOUVEAU : PDF uploadé directement pour ce rapport
+                        # -----------------------------------------------
+                        pdf_bytes = src.get("uploaded_bytes")
+                        fname = src.get("uploaded_name", "upload.pdf")
+
+                        if not pdf_bytes:
+                            st.warning(
+                                f"Rapport {st.session_state['lkr_sources'].index(src) + 1} "
+                                "(mode upload) : aucun fichier PDF chargé."
+                            )
+                            continue
+
+                        if not pdf_bytes.startswith(b"%PDF"):
+                            st.warning(
+                                f"Le fichier **{fname}** ne semble pas être un PDF valide, ignoré."
+                            )
+                            continue
+
+                        logger.info("PDF Looker récupéré via upload : %s", fname)
+                        imgs = pdf_to_png_bytes(pdf_bytes, zoom=2.0)
+                        lkr_all_images.append(imgs)
+                        lkr_all_titles.append(
+                            [f"Page {i+1}" for i in range(len(imgs))]
+                        )
+
+            # =====================================================
+            # ASSEMBLAGE PPT
+            # =====================================================
             with st.spinner("Assemblage du PowerPoint…"):
                 streams: Dict[str, Dict[str, Any]] = {
                     "tbl": {
@@ -1669,7 +1676,6 @@ def app_main():
                         "token_title": PH_TBL_TITLE,
                         "images": tbl_images,
                         "titles": (None if keep_tbl_titles else tbl_titles),
-                        # Réglages Tableau
                         "trim": True,
                         "topbar_crop_pct": topbar_pct,
                         "fit": FIT_MODE,
@@ -1689,7 +1695,6 @@ def app_main():
                             if keep_lkr_titles
                             else lkr_all_titles[idx - 1]
                         ),
-                        # Réglages Looker
                         "trim": LKR_TRIM,
                         "topbar_crop_pct": 0.0,
                         "fit": LKR_FIT_MODE,
@@ -1704,14 +1709,8 @@ def app_main():
                 tokens_map = detect_placeholders_by_tokens(
                     tpl_bytes,
                     [PH_TBL, PH_TBL_TITLE, PH_IMAGE_MAIN, PH_TITLE_MAIN]
-                    + [
-                        f"{PH_LKR_BASE}_{i}"
-                        for i in range(1, len(lkr_all_images) + 1)
-                    ]
-                    + [
-                        f"{PH_LKR_TITLE_BASE}_{i}"
-                        for i in range(1, len(lkr_all_images) + 1)
-                    ],
+                    + [f"{PH_LKR_BASE}_{i}" for i in range(1, len(lkr_all_images) + 1)]
+                    + [f"{PH_LKR_TITLE_BASE}_{i}" for i in range(1, len(lkr_all_images) + 1)],
                 )
 
                 has_tbl_slots = bool(tokens_map.get(PH_TBL.lower()))
@@ -1721,7 +1720,6 @@ def app_main():
                 )
 
                 if has_tbl_slots or has_any_lkr_slots:
-                    # Remplissage par emplacements (PH_TBL / PH_LKR_x)
                     final_ppt = fill_template_by_streams_cover(
                         template_bytes=tpl_bytes,
                         streams=streams,
@@ -1729,7 +1727,6 @@ def app_main():
                         topbar_crop_pct=topbar_pct,
                     )
                 else:
-                    # Fallback séquentiel (PH_IMAGE_MAIN / PH_TITLE)
                     flat_lkr = [img for sub in lkr_all_images for img in sub]
                     images = tbl_images + flat_lkr
 
@@ -1752,22 +1749,13 @@ def app_main():
                         topbar_crop_pct=topbar_pct,
                     )
 
-                safe = "".join(
-                    c
-                    for c in (
-                        selected_view.get("contentUrl")
-                        or selected_view["name"]
-                    )
-                    if c.isalnum() or c in "_-"
-                )
-
-                logger.info("PPT final généré avec succès : %s", safe)
+                logger.info("PPT final généré avec succès : %s", export_label)
 
                 st.success("🎉 Présentation générée !")
                 st.download_button(
                     "⬇️ Télécharger la présentation",
                     data=final_ppt,
-                    file_name=f"export_mix_{safe}.pptx",
+                    file_name=f"export_mix_{export_label}.pptx",
                     mime=(
                         "application/vnd.openxmlformats-officedocument."
                         "presentationml.presentation"
