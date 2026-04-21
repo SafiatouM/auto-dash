@@ -1351,7 +1351,6 @@ def app_main():
                     st.success("Identifiants enregistrés localement.")
                     st.rerun()
             if colB.button("↩️ Recharger depuis le cache local"):
-                st.experimental_set_query_params()
                 st.rerun()
             if colC.button("🗑️ Supprimer du cache local"):
                 clear_local_device_creds()
@@ -1367,7 +1366,6 @@ def app_main():
             cached_fetch_views.clear()
             logger.info("Cache workbooks/views vidé manuellement")
             st.success("Cache des listes vidé.")
-            st.experimental_set_query_params()
             st.rerun()
 
         st.markdown("---")
